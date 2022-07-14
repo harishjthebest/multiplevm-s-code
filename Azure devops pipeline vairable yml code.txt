@@ -1,0 +1,72 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+- group: Terraform_Modules_Variable - Copy
+- name: NICnew
+  value: $(nic)
+- name: IPconfignew
+  value: $(ipconfig)
+- name: IPaddressnew
+  value: $(ip_address)
+- name: cidrblocknew
+  value: $(cidr_block)
+- name: rgnew
+  value: $(resource_group)
+- name: SUBnew
+  value: $(sub)
+- name: VNetnew
+  value: $(vnet)
+steps:
+
+- task: TerraformInstaller@0
+  inputs:
+    terraformVersion: 'latest'
+- task: replacetokens@5
+  inputs:
+    rootDirectory: '$(System.DefaultWorkingDirectory)/Terraform_modules'
+    targetFiles: |
+      **/*.tf
+      **/*.tfvars
+    encoding: 'auto'
+    tokenPattern: 'custom'
+    tokenPrefix: '~{'
+    tokenSuffix: '}~'
+    writeBOM: true
+    actionOnMissing: 'warn'
+    keepToken: false
+    actionOnNoFiles: 'continue'
+    enableTransforms: false
+    enableRecursion: false
+    useLegacyPattern: false
+    enableTelemetry: true
+- task: TerraformTaskV3@3
+  inputs:
+    provider: 'azurerm'
+    command: 'init'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform_modules'
+    backendServiceArm: 'dev.tfstate'
+    backendAzureRmResourceGroupName: 'anjiRG1'
+    backendAzureRmStorageAccountName: 'anji12wqasxz'
+    backendAzureRmContainerName: 'anjitestcont'
+    backendAzureRmKey: 'terraform.tfstate'
+- task: TerraformTaskV3@3
+  inputs:
+    provider: 'azurerm'
+    command: 'plan'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform_modules'
+    environmentServiceNameAzureRM: 'dev.tfstate'
+- task: TerraformTaskV3@3
+  inputs:
+    provider: 'azurerm'
+    command: 'apply'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform_modules'
+    environmentServiceNameAzureRM: 'dev.tfstate'
